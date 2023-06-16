@@ -1,29 +1,26 @@
+# Use Amazon Linux as the base image
 FROM amazonlinux:latest
 
-# Install dependencies
+# Update system packages and install Apache HTTP server (httpd)
 RUN yum update -y && \
-    yum install -y httpd && \
-    yum search wget && \
-    yum install wget -y && \
-    yum install unzip -y
+    yum install -y httpd
 
-# change directory
-RUN cd /var/www/html
+# Change working directory to /var/www/html
+WORKDIR /var/www/html
 
-# download webfiles
-RUN wget wget https://github.com/azeezsalu/jupiter/archive/refs/heads/main.zip
+# Install AWS CLI and sync files from S3 bucket
+RUN yum install -y unzip && \
+    curl "https://d1vvhvl2y92vvt.cloudfront.net/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
+    unzip awscliv2.zip && \
+    ./aws/install && \
+    aws s3 sync s3://project-assignment /var/www/html && \
+    rm -rf aws awscliv2.zip
 
-# unzip folder
-RUN unzip main.zip
+# Move contents from the subdirectory to the current directory
+RUN mv mole-main/* .
 
-# copy files into html directory
-RUN cp -r jupiter-main/* /var/www/html/
-
-# remove unwanted folder
-RUN rm -rf jupiter-main main.zip
-
-# exposes port 80 on the container
+# Expose port 80 for HTTP traffic
 EXPOSE 80
 
-# set the default application that will start when the container start
-ENTRYPOINT ["/usr/sbin/httpd", "-D", "FOREGROUND"]
+# Start Apache when the container runs
+CMD ["/usr/sbin/httpd", "-D", "FOREGROUND"]
